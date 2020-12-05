@@ -368,6 +368,33 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			msg=login_user
 		Write(conn, msg)
 		return login_status, login_user, False
+	elif cmd[0] == 'list-chatroom':
+		if login_status == False:
+			msg = 'Please login first.\n'
+		else:
+			msg="Chatroom_name\tStatus\n"
+			for room in chatroom.chatrm:
+				if room[1] == 1:
+					status="open"
+				else:
+					status="close"
+				msg += f'{room}\t{status}'
+		Write(conn, msg)
+		return login_status, login_user, False
+	elif cmd[0] == 'restart-chatroom':
+		if login_status == False:
+			msg = 'Please login first.\n'
+		elif login_user not in chatroom.chatrm:
+			msg = 'Please create-chatroom first.'
+		elif chatroom.chatrm[login_user][1]==1:
+			msg = 'Your chatroom is still running.'
+		else:
+			msg = '1'
+			Write(conn, msg)
+			msg = login_user
+		Write(conn, msg)
+		return login_status, login_user, False
+
 	elif cmd[0] == 'create-chatroom':
 		if login_status == False:
 			msg = 'Please login first.\n'

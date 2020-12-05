@@ -110,9 +110,15 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 		server.sendall(cmd_string.encode('utf-8'))
 		return 1
 	elif cmd[0] == 'attach':
+
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024)
 		if data.decode('utf-8').strip() == '1':
+			print("********************************\n")
+			print("**Welcome to the the chatroom.**\n")
+			print("********************************\n")
+			for msg in chatroom.last_three[owner]:
+				print(msg)
 			owner = server.recv(1024).decode('utf-8').strip()
 			while True:
 				input_owner=input()
@@ -144,7 +150,47 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 		else:
 			print(data.decode('utf-8').strip())
 
-
+	elif cmd[0] == 'restart-chatroom':
+		server.sendall(cmd_string.encode('utf-8'))
+		data = server.recv(1024)
+		if data.decode('utf-8').strip() == '1':
+			print("start to create chatroom…")
+			print("********************************\n")
+			print("**Welcome to the the chatroom.**\n")
+			print("********************************\n")
+			owner = server.recv(1024).decode('utf-8').strip()
+			for msg in chatroom.last_three[owner]:
+				print(msg)
+			chatroom.chatrm[owner][1]=1
+			while True:
+				input_owner=input()
+				if input_owner == 'leave-chatroom':
+					chatroom.chatrm[owner][1]=0 #close
+					msg='leave-chatroom-from owner'
+					server.sendall(msg.encode())
+					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
+					for man in chatroom.member[owner]:
+						if man != user:
+							c=chatroom.map[owner][man]
+							c.sendall(msg.encode())
+					print("Welcome back to BBS")
+					break
+				elif input_owner == 'detach':
+					break
+				else:
+					x=datetime.datetime.now()
+					h=x.hour
+					m=x.minute
+					msg=f'{owner}[{h}:{m}]:{data}'
+					for man in chatroom.member[owner]:
+						if man != user:
+							c=chatroom.map[owner][man]
+							c.sendall(msg.encode())
+					chatroom.last_three[owner].append(msg)
+					if len(chatroom.last_three)>3:
+						chatroom.last_three.popleft()
+		else:
+			print(data.decode('utf-8').strip())
 	elif cmd[0] == 'create-chatroom':
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024)
