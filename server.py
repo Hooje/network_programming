@@ -32,7 +32,7 @@ User=dict()
 class Chatroom():
 	def __init__(self):
 		self.chatrm=dict()
-		self.member=dict()
+		#self.member=dict()
 		self.map=dict()
 		self.last_three=dict()
 #last_three[owner]=deque()
@@ -148,6 +148,13 @@ def create_chatroom(user,port):
 	#chatroom.map[user]=dict()
 #def join_chatroom(user, owner, port):
 	#chatroom.member[owner].append(user)
+def update_last(owner, msg):
+	#print('update')
+	#print(msg)
+	chatroom.last_three[owner].append(msg)
+	if len(chatroom.last_three[owner])>3:
+		chatroom.last_three[owner].popleft()
+
 def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 	msg = None
 	if cmd[0] == 'register':
@@ -161,7 +168,9 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 				msg = 'Register successfully.\n'
 		Write(conn, msg)
 		return login_status, login_user, False
-
+	elif cmd[0] == 'update-last':
+		update_last(cmd[1], cmd[2])
+		return login_status, login_user, False
 	elif cmd[0] == 'login':
 		if len(cmd) != 3:
 			msg = 'Usage: login <username> <password>\n'
@@ -368,15 +377,14 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 
 	elif cmd[0] == 'leave-chatroom-from':#因為在BBS打leave-chatroom 沒用
 		chatroom.chatrm[cmd[1]][1]=0
+		return login_status, login_user, False
 	elif cmd[0] == 'attach':
 		if login_status == False:
 			msg = 'Please login first.\n'
 		elif login_user not in chatroom.chatrm:
 			msg = 'Please create-chatroom first.'
 		else:
-			msg='1'
-			Write(conn,msg)
-			msg=login_user
+			msg=f'${login_user}'
 		Write(conn, msg)
 		return login_status, login_user, False
 	elif cmd[0] == 'list-chatroom':
@@ -400,17 +408,18 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 		elif chatroom.chatrm[login_user][1]==1:
 			msg = 'Your chatroom is still running.'
 		else:
-			msg = '1'
-			Write(conn, msg)
-			msg = login_user
+			msg = f'${login_user}'
 		Write(conn, msg)
 		return login_status, login_user, False
 	elif cmd[0] == 'last-three':
 		last = chatroom.last_three[cmd[1]]
-		for i in range(len(msg)):
+		msg='nothing'
+		print(last)
+		for i in range(len(last)):
 			if i == 0:
 				msg=last[0]
 			else:
+				print(last[i])
 				msg+=f'${last[i]}'
 		Write(conn,msg)
 		return login_status, login_user, False
@@ -424,9 +433,7 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 				msg='User has already created the chatroom'
 			else: 
 				create_chatroom(login_user, cmd[1])
-				msg='1'
-				Write(conn, msg)
-				msg=login_user
+				msg=f'${login_user}'
 		Write(conn, msg)
 		return login_status, login_user, False
 	elif cmd[0] == 'join-chatroom':
@@ -436,8 +443,6 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			msg = 'The chatroom does not exist or the chatroom is close.' 
 		else:
 			#join_chatroom(login_user, cmd[1], chatroom.chatrm[cmd[1]][0])
-			msg = '1'
-			Write(conn,msg)
 			msg = f'{login_user}${chatroom.chatrm[cmd[1]][0]}'
 		Write(conn,msg)
 		return login_status, login_user, False
