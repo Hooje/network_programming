@@ -6,7 +6,7 @@ import sys
 import os
 import re
 from datetime import date
-
+from collections import deque
 global HOST
 global PORT
 HOST = '127.0.0.1'
@@ -32,6 +32,13 @@ User=dict()
 class Chatroom():
 	def __init__(self):
 		self.chatrm=dict()
+		self.member=dict()
+		self.map=dict()
+		self.last_three=dict()
+#last_three[owner]=deque()
+#map[owner]=dict()
+#map[owner][user]=conn
+#member[owner]=[member1,member2,member3]
 #chatrm[owner]=[port, open_or_not]  if open: 1   要檢查是int 或 str
 chatroom=Chatroom()
 def Init():
@@ -135,8 +142,12 @@ def GetCommentCount(post_id):
 	return len(board.comment[post_id])
 def create_chatroom(user,port):
 	chatroom.chatrm[user]=[port, 1]#open
+	#chatroom.member[user]=[]
+	#chatroom.member[user].append(user)
+	chatroom.last_three[user]=deque()
+	#chatroom.map[user]=dict()
 #def join_chatroom(user, owner, port):
-
+	#chatroom.member[owner].append(user)
 def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 	msg = None
 	if cmd[0] == 'register':
@@ -394,15 +405,25 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			msg = login_user
 		Write(conn, msg)
 		return login_status, login_user, False
-
+	elif cmd[0] == 'last-three':
+		last = chatroom.last_three[cmd[1]]
+		for i in range(len(msg)):
+			if i == 0:
+				msg=last[0]
+			else:
+				msg+=f'${last[i]}'
+		Write(conn,msg)
+		return login_status, login_user, False
 	elif cmd[0] == 'create-chatroom':
 		if login_status == False:
 			msg = 'Please login first.\n'
+		elif len(cmd)!=2:
+			msg = 'Usage: create-chatroom <port>'
 		else:
 			if login_user in chatroom.chatrm:
 				msg='User has already created the chatroom'
 			else: 
-				create_chatroom()
+				create_chatroom(login_user, cmd[1])
 				msg='1'
 				Write(conn, msg)
 				msg=login_user
@@ -414,10 +435,10 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 		elif cmd[1] not in chatroom.chatrm or chatroom.chatrm[cmd[1]][1] == '0' :
 			msg = 'The chatroom does not exist or the chatroom is close.' 
 		else:
-			#join_chatroom()
+			#join_chatroom(login_user, cmd[1], chatroom.chatrm[cmd[1]][0])
 			msg = '1'
 			Write(conn,msg)
-			msg = login_user
+			msg = f'{login_user}${chatroom.chatrm[cmd[1]][0]}'
 		Write(conn,msg)
 		return login_status, login_user, False
 

@@ -5,40 +5,44 @@ import socket
 import os
 import datetime
 from collections import deque
+import threading
 # global ID, random_num
 # ID =  str(random.randint(0, 100000))
 # random_num = 0
 conn_pool = []
 class Chatroom():
 	def __init__(self):
-		self.chatrm=dict()
-		self.member=dict()
+		#self.chatrm=dict()
+		#self.member=[]
 		self.map=dict()
-		self.last_three=dict()
+		#self.last_three=dict()
 	
 #last_three[owner]=deque()
-#map[owner]=dict()
-#map[owner][user]=conn
-#member[owner]=[member1,member2,member3]
+#map[user]=conn
+#member=[member1,member2,member3]
 #chatrm[owner]=[port, open_or_not]  if open: 1   要檢查是int 或 str
 chatroom=Chatroom()
 def create_chatroom(user, chatrm_port):
 	chatrm_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	chatrm_server.bind(('127.0.0.1', chatrm_port))
+	chatrm_server.bind(('127.0.0.1', int(chatrm_port)))
 	chatrm_server.listen(10)
 	print("start to create chatroom...\n")
 	print("********************************\n")
 	print("** Welcome to the the chatroom. **\n")
 	print("********************************\n")
-	chatroom.chatrm[user]=[chatrm_port, 1]
-	chatroom.member[user]=[]
-	chatroom.member[user].append(user)
-	chatroom.last_three[user]=deque()
-def handle_chatroom_client(owner):
+	#chatroom.chatrm[user]=[chatrm_port, 1]
+	# print(chatroom.chatrm)
+	# print(chatroom.chatrm[user])
+	# chatroom.member[user]=[]
+	# chatroom.member[user].append(user)
+	# chatroom.last_three[user]=deque()
+	#chatroom.map[user]=dict()
+	return chatrm_server
+def handle_chatroom_client(owner, chatrm_server):
 	while True:
 		conn, addr = chatrm_server.accept()
 		user=conn.recv(1024).decode('utf-8').strip()
-		chatroom.map[owner][user]=conn
+		chatroom.map[user]=conn
 		threads = threading.Thread(target = chatroom_broadcast, args = (conn, owner,user))
 		threads.setDaemon(True)
 		threads.start()
@@ -50,27 +54,33 @@ def chatroom_broadcast(conn, owner, user):
 		m=x.minute
 		msg=f'{user}[{h}:{m}]:{data}'
 		print(msg)#owner自己看
-		for man in chatroom.member[owner]:#給其它人看
+		for man in chatroom.map:#給其它人看
 			if man != user:
-				c=chatroom.map[owner][man]
+				c=chatroom.map[man]
 				c.sendall(msg.encode())
 		chatroom.last_three[owner].append(msg)#更新最新三句話
 		if len(chatroom.last_three)>3:
 			chatroom.last_three.popleft()
 
-def join_chatroom(user, owner)
+def join_chatroom(user, owner, target_port):
 	chatroom_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	chatroom_server.connect((HOST, chatroom.chatrm[owner][0]))
+	#print(chatroom.chatrm)
+	#print(chatroom.chatrm[owner])
+	chatroom_server.connect((HOST, int(target_port)))
 	chatroom_server.sendall(user.encode())
-	chatroom.member[owner].append(user)
+	#chatroom.member[owner].append(user)
 	Handle_join_chatroom(chatroom_server, owner, user)
 
-def Handle_join_chatroom(chatroom_server,owner,user)
+def Handle_join_chatroom(chatroom_server,owner,user):
 	print("Action: connection to chatroom server.\n")
 	print("********************************\n")
 	print("** Welcome to the the chatroom. **\n")
 	print("********************************\n")
-	for msg in chatroom.last_three[owner]:
+	msg=f'last-three {owner}'
+	server.sendall(msg.encode())
+	last_three_get=server.recv(1024).decode('utf-8').strip()
+	last_three_get=last_three_get.split('$', -1)
+	for msg in last_three_get:
 		print(msg)
 	while True:
 		sockets_list = [sys.stdin, chatroom_server]
@@ -79,12 +89,15 @@ def Handle_join_chatroom(chatroom_server,owner,user)
 			if socks == chatroom_server:
 				msg=socks.recv(1024)
 				msg=str(msg.decode())
-				if chatroom.chatrm[owner][1] == 0:
+				if msg == 'Welcome back to BBS':
 					print("Welcome back to BBS.")
 					chatroom_server.close()
+				else:
+					print(msg)
 			else:
 				input_user=input()
 				if input_user == 'leave-chatroom':
+					print('we may have to reduce the owner chatroom.map')
 					break
 				else:
 					chatroom_server.sendall(input_user.encode())
@@ -117,20 +130,29 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 			print("********************************\n")
 			print("**Welcome to the the chatroom.**\n")
 			print("********************************\n")
-			for msg in chatroom.last_three[owner]:
-				print(msg)
 			owner = server.recv(1024).decode('utf-8').strip()
+			msg=f'last-three {owner}'
+			server.sendall(msg.encode())
+			last_three_get=server.recv(1024).decode('utf-8').strip()
+			for msg in last_three_get:
+				print(msg)
 			while True:
 				input_owner=input()
 				if input_owner == 'leave-chatroom':
-					chatroom.chatrm[owner][1]=0 #close
+					#chatroom.chatrm[owner][1]=0 #close
 					msg='leave-chatroom-from owner'
 					server.sendall(msg.encode())
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
-					for man in chatroom.member[owner]:
+					for man in chatroom.map:
 						if man != user:
-							c=chatroom.map[owner][man]
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
+					msg=f'Welcome to BBS'
+					for man in chatroom.map:
+						if man != user:
+							c=chatroom.map[man]
+							c.sendall(msg.encode())
+					
 					print("Welcome back to BBS")
 					break
 				elif input_owner == 'detach':
@@ -140,9 +162,9 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 					h=x.hour
 					m=x.minute
 					msg=f'{owner}[{h}:{m}]:{data}'
-					for man in chatroom.member[owner]:
+					for man in chatroom.map:
 						if man != user:
-							c=chatroom.map[owner][man]
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
 					chatroom.last_three[owner].append(msg)
 					if len(chatroom.last_three)>3:
@@ -169,9 +191,9 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 					msg='leave-chatroom-from owner'
 					server.sendall(msg.encode())
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
-					for man in chatroom.member[owner]:
+					for man in chatroom.map:
 						if man != user:
-							c=chatroom.map[owner][man]
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
 					print("Welcome back to BBS")
 					break
@@ -182,9 +204,9 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 					h=x.hour
 					m=x.minute
 					msg=f'{owner}[{h}:{m}]:{data}'
-					for man in chatroom.member[owner]:
+					for man in chatroom.map:
 						if man != user:
-							c=chatroom.map[owner][man]
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
 					chatroom.last_three[owner].append(msg)
 					if len(chatroom.last_three)>3:
@@ -194,10 +216,15 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 	elif cmd[0] == 'create-chatroom':
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024)
-		if data.decode('utf-8').strip() == '1':
+		data=data.decode('utf-8').strip()
+
+		if data == '1':
+			print('success create')
 			owner = server.recv(1024).decode('utf-8').strip()
-			create_chatroom(owner, cmd[1])
-			thread = threading.Thread(target = handle_chatroom_client, args(owner,))
+			#print(owner)
+			#print(cmd[1])
+			chatrm_server=create_chatroom(owner, cmd[1])
+			thread = threading.Thread(target = handle_chatroom_client, args=(owner,chatrm_server))
 			thread.start()
 			while True:
 				input_owner=input()
@@ -206,9 +233,9 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 					msg='leave-chatroom-from owner'
 					server.sendall(msg.encode())
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
-					for man in chatroom.member[owner]:
+					for man in chatroom.map:
 						if man != user:
-							c=chatroom.map[owner][man]
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
 					print("Welcome back to BBS")
 					break
@@ -219,24 +246,31 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 					h=x.hour
 					m=x.minute
 					msg=f'{owner}[{h}:{m}]:{data}'
-					for man in chatroom.member[owner]:
-						if man != user:
-							c=chatroom.map[owner][man]
+					for man in chatroom.map:
+						if man != owner:
+							c=chatroom.map[man]
 							c.sendall(msg.encode())
 					chatroom.last_three[owner].append(msg)
 					if len(chatroom.last_three)>3:
 						chatroom.last_three.popleft()
-		else :
-			print(data.decode('utf-8').strip())
-	elif cmd[0] == 'join-chatroom'
+		else:
+			print('didn create')
+			print(data)
+	elif cmd[0] == 'join-chatroom':
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024)
-		if data.decode('utf-8').strip() == '1':
-			user = server.recv(1024).decode('utf-8').strip()
-			join_chatroom(user, cmd[1])
-			thread = threading.Thread(target = )
-	else :
-
+		data=data.decode('utf-8').strip() 
+		if data == '1':
+			print('join success')
+			msg=server.recv(1024).decode('utf-8').strip()
+			msg=msg.split('$',-1)
+			user, target_port=msg[0], msg[1]
+			join_chatroom(user, cmd[1], target_port)
+			#thread = threading.Thread(target = )
+		else :
+			print('join error')
+			print(data)
+	else:
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024)
 		if len(data) == 0:
