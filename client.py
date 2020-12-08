@@ -11,6 +11,7 @@ import select
 # ID =  str(random.randint(0, 100000))
 # random_num = 0
 conn_pool = []
+#close_chatroom = 0
 class Chatroom():
 	def __init__(self):
 		#self.chatrm=dict()
@@ -64,15 +65,21 @@ def chatroom_broadcast(conn, owner, user):
 	while True:
 		#print('broadcast')
 		data = conn.recv(1024).decode('utf-8').strip()
+		while data == '':
+			data = conn.recv(1024).decode('utf-8').strip()
+		if len(data.split('$', -1)) == 3: #leave
+			leave_user = data.split('$', -1)[2]
+			chatroom.map.pop(leave_user)
+			return  #一個connection就用一個function，所以要整個拿掉
 		x=datetime.datetime.now()
 		h=x.hour
 		m=x.minute
 		msg=f'{user}[{h}:{m}]:{data}'
 		print(msg)#owner自己看
 		for man in chatroom.map:#給其它人看
-			if man != user:
-				c=chatroom.map[man]
-				c.sendall(msg.encode())
+			#if man != user:
+			c=chatroom.map[man]
+			c.sendall(msg.encode())
 		update_last(owner, msg)
 		# chatroom.last_three[owner].append(msg)#更新最新三句話
 		# if len(chatroom.last_three)>3:
@@ -101,7 +108,9 @@ def Handle_join_chatroom(chatroom_server,owner,user):
 		for msg in last_three_get:
 			print(msg)
 	#print('print finish')
+#	leave = 0
 	while True:
+
 		#print('start infinite while')
 		sockets_list = [sys.stdin, chatroom_server]
 		read_socket, write_socket, error_socket = select.select(sockets_list,[],[])
@@ -109,20 +118,25 @@ def Handle_join_chatroom(chatroom_server,owner,user):
 			#print('enter read socket')
 			if socks == chatroom_server:
 				msg=socks.recv(1024).decode('utf-8').strip()
-				if msg == 'Welcome back to BBS':
+				#msg=f'here {msg} here'
+				if msg[-1] == '$':
 					print("Welcome back to BBS.")
 					chatroom_server.close()
-					break
-					
+					#leave = 1
+					return
 				else:
 					print(msg)
 			else:
 				#print('pre-here')
 				input_user=sys.stdin.readline()
+				input_user=input_user.strip()
 				sys.stdout.flush()
 				if input_user == 'leave-chatroom':
+					input_user = f'$leave-chatroom${user}'
+					chatroom_server.sendall(input_user.encode())
+					print('Welcome back to BBS.')
 					print('we may have to reduce the owner chatroom.map')
-					break
+					return
 				else:
 					chatroom_server.sendall(input_user.encode())
 		#print('leave for loop')
@@ -160,87 +174,97 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 			msg=f'last-three {owner}'
 			server.sendall(msg.encode())
 			last_three_get=server.recv(1024).decode('utf-8').strip()
-			print('get three')
+			#print('get three')
 			last_three_get=last_three_get.split('$', -1)
 			for msg in last_three_get:
 				print(msg)
 
 			while True:
-				print('while init')
+				#print('while init')
 				input_owner=sys.stdin.readline()
 				input_owner=input_owner.strip()
+				x=datetime.datetime.now()
+				h=x.hour
+				m=x.minute
 				#test=f'here {input_owner} here'
 				#print(test)
 				#print("an input")
 				if input_owner == 'leave-chatroom':
-					print('leave')
-					chatroom.chatrm[owner][1]=0 #close
-					msg='leave-chatroom-from owner'
+					#print('leave')
+					#chatroom.chatrm[owner][1]=0 #close
+					msg=f'leave-chatroom-from {owner}'
 					server.sendall(msg.encode())
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
 					for man in chatroom.map:
-						if man != user:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != owner:
+						msg+='$'	
+						c=chatroom.map[man]
+						c.sendall(msg.encode())
 					print("Welcome back to BBS")
-					break
+					return
 				elif input_owner == 'detach':
 					break
 				else:
 					#print('here')
-					x=datetime.datetime.now()
-					h=x.hour
-					m=x.minute
+
 					msg=f'{owner}[{h}:{m}]:{input_owner}'
 					update_last(owner,msg)
 					for man in chatroom.map:
-						if man != owner:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != owner:
+						c=chatroom.map[man]
+						c.sendall(msg.encode())
 		else:
 			print(data[0])
 
 	elif cmd[0] == 'restart-chatroom':
+
 		server.sendall(cmd_string.encode('utf-8'))
 		data = server.recv(1024).decode('utf-8').strip()
 		data = data.split('$', -1)
 		if len(data) > 1:
+			#close_chatroom = 0
 			print("start to create chatroom…")
 			print("********************************\n")
 			print("**Welcome to the the chatroom.**\n")
 			print("********************************\n")
-			owner = server.recv(1024).decode('utf-8').strip()
+			owner = data[1]
 			msg=f'last-three {owner}'
 			server.sendall(msg.encode())
+			#last_three_get=server.recv(1024).decode('utf-8').strip()
 			last_three_get=server.recv(1024).decode('utf-8').strip()
-			for msg in last_three_get:
-				print(msg)
-			
-			chatroom.chatrm[owner][1]=1
+			last_three_get=last_three_get.split('$', -1)
+			#print('receive finish')
+			if last_three_get[0] != 'nothing':
+				for msg in last_three_get:
+					print(msg)
+			#chatroom.chatrm[owner][1]=1
 			while True:
 				input_owner=input()
+				x=datetime.datetime.now()
+				h=x.hour
+				m=x.minute
 				if input_owner == 'leave-chatroom':
-					chatroom.chatrm[owner][1]=0 #close
-					msg='leave-chatroom-from owner'
+					#close_chatroom =  1
+					#chatroom.chatrm[owner][1]=0 #close
+					msg=f'leave-chatroom-from {owner}'
 					server.sendall(msg.encode())
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
 					for man in chatroom.map:
-						if man != user:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != user:
+						c=chatroom.map[man]
+						msg+='$'
+						c.sendall(msg.encode())
 					print("Welcome back to BBS")
 					break
 				elif input_owner == 'detach':
 					break
 				else:
-					x=datetime.datetime.now()
-					h=x.hour
-					m=x.minute
-					msg=f'{owner}[{h}:{m}]:{data[1]}'
+
+					msg=f'{owner}[{h}:{m}]:{input_owner}'
 					for man in chatroom.map:
-						if man != user:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != :owner
+						c=chatroom.map[man]
+						c.sendall(msg.encode())
 					update_last(owner, msg)
 		else:
 			print(data[0])
@@ -259,40 +283,52 @@ def HandleClientCommand(server, cmd, cmd_string):#, input_cmd):
 			thread_create_server.setDaemon(True)
 			thread_create_server.start()
 			
-
+			#leave = 0
 			#print('before input owner')
 			while True:
+				# if leave == 1:
+				# 	print('just leave')
+				# 	break
 				#print('input owner')
 				input_owner=sys.stdin.readline()
 				input_owner=input_owner.strip()
+				x=datetime.datetime.now()
+				h=x.hour
+				m=x.minute
 				#test=f'here {input_owner} here'
 				#print(test)
 				#print("an input")
 				if input_owner == 'leave-chatroom':
+
+					##close_chatroom = 1
 					#print('leave')
-					chatroom.chatrm[owner][1]=0 #close
-					msg='leave-chatroom-from owner'
+					#chatroom.chatrm[owner][1]=0 #close
+					msg=f'leave-chatroom-from {owner}'
 					server.sendall(msg.encode())
+					#print('have send server')
+					#input()
 					msg=f'{owner}[{h}:{m}]:the chatroom is close.'
 					for man in chatroom.map:
-						if man != user:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != owner:
+						c=chatroom.map[man]
+						msg+='$'						
+						c.sendall(msg.encode())
+						#print(f'send to {man}')
 					print("Welcome back to BBS")
+					#input()
+					#leave = 1
 					break
 				elif input_owner == 'detach':
 					break
 				else:
 					#print('here')
-					x=datetime.datetime.now()
-					h=x.hour
-					m=x.minute
+					
 					msg=f'{owner}[{h}:{m}]:{input_owner}'
 					update_last(owner,msg)
 					for man in chatroom.map:
-						if man != owner:
-							c=chatroom.map[man]
-							c.sendall(msg.encode())
+						#if man != owner:
+						c=chatroom.map[man]
+						c.sendall(msg.encode())
 
 			
 					

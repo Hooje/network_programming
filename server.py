@@ -46,6 +46,9 @@ def Init():
 	server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server.bind((HOST, PORT))
 	server.listen(10)
+	CreateUser('tt', 'tt', 'tt')
+	CreateUser('ttt', 'tes1', 'ttt')
+	CreateUser('tttt', 'tes2', 'tttt')
 
 def Write(conn, msg):
 	conn.sendall(msg.encode())	
@@ -408,18 +411,19 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 		elif chatroom.chatrm[login_user][1]==1:
 			msg = 'Your chatroom is still running.'
 		else:
+			chatroom.chatrm[login_user][1]=1
 			msg = f'${login_user}'
 		Write(conn, msg)
 		return login_status, login_user, False
 	elif cmd[0] == 'last-three':
 		last = chatroom.last_three[cmd[1]]
 		msg='nothing'
-		print(last)
+		#print(last)
 		for i in range(len(last)):
 			if i == 0:
 				msg=last[0]
 			else:
-				print(last[i])
+				#print(last[i])
 				msg+=f'${last[i]}'
 		Write(conn,msg)
 		return login_status, login_user, False
@@ -439,8 +443,11 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 	elif cmd[0] == 'join-chatroom':
 		if login_status == False:
 			msg = 'Please login first.\n'
-		elif cmd[1] not in chatroom.chatrm or chatroom.chatrm[cmd[1]][1] == '0' :
-			msg = 'The chatroom does not exist or the chatroom is close.' 
+		elif cmd[1] not in chatroom.chatrm:
+			msg = 'The chatroom does not exist or the chatroom is close.'
+		elif chatroom.chatrm[cmd[1]][1] == 0 : 
+			
+			msg = 'The chatroom does not exist or the chatroom is close.'
 		else:
 			#join_chatroom(login_user, cmd[1], chatroom.chatrm[cmd[1]][0])
 			msg = f'{login_user}${chatroom.chatrm[cmd[1]][0]}'
