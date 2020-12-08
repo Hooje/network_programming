@@ -151,12 +151,12 @@ def create_chatroom(user,port):
 	#chatroom.map[user]=dict()
 #def join_chatroom(user, owner, port):
 	#chatroom.member[owner].append(user)
-def update_last(owner, msg):
-	#print('update')
-	#print(msg)
-	chatroom.last_three[owner].append(msg)
-	if len(chatroom.last_three[owner])>3:
-		chatroom.last_three[owner].popleft()
+# def update_last(owner, msg):
+# 	#print('update')
+# 	#print(msg)
+# 	chatroom.last_three[owner].append(msg)
+# 	if len(chatroom.last_three[owner])>3:
+# 		chatroom.last_three[owner].popleft()
 
 def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 	msg = None
@@ -386,6 +386,8 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			msg = 'Please login first.\n'
 		elif login_user not in chatroom.chatrm:
 			msg = 'Please create-chatroom first.'
+		elif chatroom.chatrm[login_user][1]==0:
+			msg = 'Please create-chatroom first.'
 		else:
 			msg=f'${login_user}'
 		Write(conn, msg)
@@ -415,18 +417,18 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			msg = f'${login_user}'
 		Write(conn, msg)
 		return login_status, login_user, False
-	elif cmd[0] == 'last-three':
-		last = chatroom.last_three[cmd[1]]
-		msg='nothing'
-		#print(last)
-		for i in range(len(last)):
-			if i == 0:
-				msg=last[0]
-			else:
-				#print(last[i])
-				msg+=f'${last[i]}'
-		Write(conn,msg)
-		return login_status, login_user, False
+	# elif cmd[0] == 'last-three':
+	# 	last = chatroom.last_three[cmd[1]]
+	# 	msg='nothing'
+	# 	#print(last)
+	# 	for i in range(len(last)):
+	# 		if i == 0:
+	# 			msg=last[0]
+	# 		else:
+	# 			#print(last[i])
+	# 			msg+=f'${last[i]}'
+	# 	Write(conn,msg)
+	# 	return login_status, login_user, False
 	elif cmd[0] == 'create-chatroom':
 		if login_status == False:
 			msg = 'Please login first.\n'
