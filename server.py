@@ -51,7 +51,8 @@ def Init():
 	CreateUser('tttt', 'tes2', 'tttt')
 
 def Write(conn, msg):
-	conn.sendall(msg.encode())	
+	if msg:
+		conn.sendall(msg.encode())	
 
 def HandleClient():
 	while True:
@@ -212,8 +213,10 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 		else:
 			if login_status == False:
 				msg = 'Please login first.\n'
-			elif chatroom.chatrm[login_user][1]==1:
-				msg = 'Please do “attach” and “leave-chatroom” first'
+
+			elif login_user in chatroom.chatrm:
+				if chatroom.chatrm[login_user][1]==1:
+					msg = 'Please do “attach” and “leave-chatroom” first'
 			else:
 				msg = 'Bye, ' + login_user + '.\n'
 				login_user = None
