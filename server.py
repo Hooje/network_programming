@@ -217,10 +217,15 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 			elif login_user in chatroom.chatrm:
 				if chatroom.chatrm[login_user][1]==1:
 					msg = 'Please do “attach” and “leave-chatroom” first'
+				else:
+					msg = 'Bye, ' + login_user + '.\n'
+					login_user = None
+					login_status = False
 			else:
 				msg = 'Bye, ' + login_user + '.\n'
 				login_user = None
 				login_status = False
+		#print(msg)
 		Write(conn, msg)
 		return login_status, login_user, False
 
@@ -405,7 +410,7 @@ def HandleCommand(conn, cmd, cmd_orig, login_status, login_user):
 					status="open"
 				else:
 					status="close"
-				msg += f'{room}\t{status}'
+				msg += f'{room}\t{status}\n'
 		Write(conn, msg)
 		return login_status, login_user, False
 	elif cmd[0] == 'restart-chatroom':
