@@ -1,0 +1,17 @@
+BBS 程式 Readme
+概要
+這是一個基於 socket 的 BBS (Bulletin Board System) 程式，包含了 server 和 client 兩個主要元件。Server 利用多執行緒 (thread) 來處理多個客戶端 (client) 的連線，並進行使用者管理、發文、留言以及聊天室功能。
+
+功能特色
+1. 登入/登出
+使用者可以透過 BBS 程式進行註冊 (create user)、登入 (login) 以及登出 (logout)。
+使用者資料存放在 server 端，確保資料的安全性。
+2. 發文及留言
+登入後的使用者可以建立新的看板 (create board) 並在指定看板上發文。
+使用者可以透過 post-id 進行留言 (comment)，留言資料也存放在 server 端。
+3. 聊天室功能
+使用者可以建立個人聊天室 (create chatroom)。
+聊天室支援多個用戶同時參與，每個用戶擁有獨立的 thread 處理訊息。
+Server 負責繼發站，將訊息轉發給相應的聊天室及用戶。
+使用者可以指定其他使用者加入聊天室，並能夠即時看到聊天室內的訊息。
+聊天室支援廣播功能，用戶發送的訊息會同時傳送給聊天室內的所有用戶。
